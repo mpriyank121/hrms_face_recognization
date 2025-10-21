@@ -1,18 +1,15 @@
 import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:camera/camera.dart';
 import 'package:get/get.dart';
 import 'package:hrms_face_recognization/config/App_margin.dart';
 import 'package:hrms_face_recognization/core/widgets/bordered_container.dart';
 import 'package:hrms_face_recognization/screens/controllers/location_controller.dart';
-import 'package:hrms_face_recognization/screens/face_detection/service/face_detection_service.dart';
 import 'package:hrms_face_recognization/widgets/custom_app_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../utils/shared_pref_helper.dart';
 import '../controllers/employee_controller.dart';
 import '../controllers/face_detection_controller.dart';
-import '../login/Widgets/avatar_painter.dart';
 import '../widgets/grouped_employee_list.dart';
 import '../wlecome_page.dart';
 import 'camera_view_screen.dart';
@@ -274,7 +271,6 @@ class _FaceDetectionScreenState extends State<FaceDetectionScreen> {
           employeeController: employeeController,
           onRegisterTap: (employee) async {
             await faceDetectionController.onEmployeeSelected(employee);
-            // Refresh employees after registration
             await employeeController.refreshEmployees();
           },
         ),

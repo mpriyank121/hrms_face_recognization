@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:camera/camera.dart';
+import 'package:intl/intl.dart';
+import '../../utils/pin_dialog.dart';
 import '../controllers/face_detection_controller.dart';
 import '../login/Widgets/avatar_painter.dart';
 
@@ -14,174 +16,63 @@ class FaceDetectionView extends StatefulWidget {
 
 class _FaceDetectionViewState extends State<FaceDetectionView> {
   late final FaceDetectionController controller;
+  String currentTime = '';
+  String currentDate = '';
 
   @override
   void initState() {
     super.initState();
     controller = Get.find<FaceDetectionController>();
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    _updateDateTime();
+    // Update time every second
+    Future.doWhile(() async {
+      await Future.delayed(const Duration(seconds: 1));
+      if (mounted) {
+        _updateDateTime();
+        return true;
+      }
+      return false;
+    });
+  }
+
+  void _updateDateTime() {
+    if (mounted) {
+      setState(() {
+        final now = DateTime.now();
+        currentTime = DateFormat('hh:mm:ss a').format(now);
+        currentDate = DateFormat('EEEE, MMM dd, yyyy').format(now);
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    controller.closeCamera();
+    super.dispose();
   }
 
   Future<bool> _handleBackNavigation() async {
-    // If in registration mode, allow normal back navigation
     if (controller.isRegistrationMode.value) {
       await controller.closeCamera();
-      return true; // Allow navigation
+      return true;
     }
 
-    // If not in registration mode, require PIN
-    final shouldExit = await _showPinDialog();
+    final shouldExit = await showPinDialog(context);
     if (shouldExit == true) {
       await controller.closeCamera();
-      return true; // Allow navigation
+      return true;
     }
-    return false; // Block navigation
-  }
-
-  Future<bool?> _showPinDialog() async {
-    final TextEditingController pinController = TextEditingController();
-    final formKey = GlobalKey<FormState>();
-
-    return showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return PopScope(
-          canPop: false, // Prevent dialog dismissal with back button
-          child: AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            title: Row(
-              children: const [
-                Icon(Icons.lock, color: Colors.deepOrange),
-                SizedBox(width: 12),
-                Text(
-                  'Enter PIN',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            content: Form(
-              key: formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text(
-                    'Enter your PIN to exit',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  TextFormField(
-                    controller: pinController,
-                    keyboardType: TextInputType.number,
-                    obscureText: true,
-                    maxLength: 6,
-                    autofocus: true,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                    ],
-                    decoration: InputDecoration(
-                      hintText: 'Enter PIN',
-                      prefixIcon: const Icon(Icons.pin, color: Colors.deepOrange),
-                      counterText: '',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                          color: Colors.deepOrange,
-                          width: 2,
-                        ),
-                      ),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter PIN';
-                      }
-                      if (value.length < 4) {
-                        return 'PIN must be at least 4 digits';
-                      }
-                      return null;
-                    },
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text(
-                  'Cancel',
-                  style: TextStyle(
-                    color: Colors.grey,
-                    fontSize: 16,
-                  ),
-                ),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  if (formKey.currentState!.validate()) {
-                    final enteredPin = pinController.text;
-                    if (_verifyPin(enteredPin)) {
-                      Navigator.of(context).pop(true);
-                    } else {
-                      // Show error
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Incorrect PIN'),
-                          backgroundColor: Colors.red,
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
-                      pinController.clear();
-                    }
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.deepOrange,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 12,
-                  ),
-                ),
-                child: const Text(
-                  'Submit',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  bool _verifyPin(String pin) {
-    // TODO: Replace with your actual PIN verification logic
-    const String adminPin = '1234';
-    return pin == adminPin;
+    return false;
   }
 
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: false, // Always block system back button
+      canPop: false,
       onPopInvoked: (didPop) async {
         if (!didPop) {
-          // Handle back button press
           await _handleBackNavigation();
         }
       },
@@ -201,17 +92,20 @@ class _FaceDetectionViewState extends State<FaceDetectionView> {
         children: [
           _buildCameraPreview(),
           _buildFaceOverlays(),
+          _buildBackButton(),
+          _buildDateTimeDisplay(),
           _buildTopInstruction(),
           if (controller.isProcessing.value &&
               controller.recognitionSuccess.value == null)
             _buildProcessingIndicator(),
           if (controller.recognitionSuccess.value != null &&
-              !controller.isEarlyCheckoutDialogOpen.value)
+              !controller.isPopupOpen.value)
             _buildRecognitionResult(),
           if (controller.isRegistrationMode.value &&
               controller.recognitionSuccess.value == null)
             _buildRegistrationButton(),
-          _buildBackButton(),
+          if (!controller.isRegistrationMode.value)
+            _buildWatermark(),
         ],
       ),
     );
@@ -278,9 +172,50 @@ class _FaceDetectionViewState extends State<FaceDetectionView> {
     );
   }
 
+  Widget _buildDateTimeDisplay() {
+    return Positioned(
+      top: 50,
+      right: 16,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.6),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Colors.white.withOpacity(0.2),
+            width: 1,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              currentTime,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              currentDate,
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.8),
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildTopInstruction() {
     return Positioned(
-      top: 60,
+      top: 120,
       left: 20,
       right: 20,
       child: Center(
@@ -307,7 +242,7 @@ class _FaceDetectionViewState extends State<FaceDetectionView> {
 
   Widget _buildProcessingIndicator() {
     return Positioned(
-      top: 100,
+      top: 160,
       left: 0,
       right: 0,
       child: Center(
@@ -422,7 +357,7 @@ class _FaceDetectionViewState extends State<FaceDetectionView> {
                 if (controller.recognizedCode.value != null) ...[
                   const SizedBox(height: 2),
                   Text(
-                    'ID: ${controller.recognizedCode.value}',
+                    'EmpCode: ${controller.recognizedCode.value}',
                     style: const TextStyle(
                       color: Colors.white70,
                       fontSize: 13,
@@ -554,6 +489,41 @@ class _FaceDetectionViewState extends State<FaceDetectionView> {
           onPressed: () async {
             await _handleBackNavigation();
           },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWatermark() {
+    return Positioned(
+      bottom: 0,
+      left: 0,
+      right: 0,
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.5),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Powered by ',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.7),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+              // Replace this with your actual logo image
+              Image.asset(
+                'assets/images/watermark_corehrx.png',
+                height: 80,
+              ),
+            ],
+          ),
         ),
       ),
     );

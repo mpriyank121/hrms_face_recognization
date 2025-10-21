@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:get/get.dart';
 import 'package:hrms_face_recognization/utils/shared_pref_helper.dart';
+import 'package:hrms_face_recognization/utils/update_dialog.dart';
+import 'package:hrms_face_recognization/utils/update_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 
@@ -167,22 +169,41 @@ class _CustomSplashScreenState extends State<CustomSplashScreen>
     print("🚀 Starting app initialization...");
 
     try {
-      print("🔍 Checking login status...");
+      print("🔍 Checking app version...");
+      // Call version check
+      final versionResult = await CheckAppVersionService.checkAppVersion();
+      if (versionResult != null && versionResult['check'] == 1) {
+        final mandatory = versionResult['mandatory'] == '1';
+        final description = versionResult['description'] ?? 'New update available';
+        final appLink = versionResult['app_link'] ?? '';
 
-      // Check if user is logged in
-      final prefs = await SharedPreferences.getInstance();
-      final bool isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
+        // Show update dialog
+        if (mounted) {
+          await showUpdateDialog(
+            context,
+            description: description,
+            appLink: appLink,
+            mandatory: mandatory,
+          );
+        }
 
-      print("✅ Login check completed - isLoggedIn: $isLoggedIn");
-
-      if (!mounted) {
-        print("❌ Widget not mounted after login check");
-        return;
+        // If mandatory, stop further navigation
+        if (mandatory) return;
       }
 
-      // Navigate based on login status
+      print("🔍 Checking login status...");
+
+      // Check login status
+      final prefs = await SharedPreferences.getInstance();
+      final bool isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
+      print("✅ Login check completed - isLoggedIn: $isLoggedIn");
+
+      if (!mounted) return;
+
+      // Play exit animations
       await _exitAnimation();
 
+      // Navigate
       if (mounted) {
         if (isLoggedIn) {
           print("📱 Navigating to Face Detection screen...");
@@ -194,13 +215,13 @@ class _CustomSplashScreenState extends State<CustomSplashScreen>
       }
     } catch (e) {
       print("❌ Error in app initialization: $e");
-      // On error, go to welcome screen
       if (mounted) {
         await _exitAnimation();
         Get.offAllNamed('/welcome');
       }
     }
   }
+
 
   Future<void> _exitAnimation() async {
     _loadingController.stop();

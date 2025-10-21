@@ -25,7 +25,6 @@ Future<void> main() async {
     debugPrint('Initializing Firebase...');
     await DioClient().initialize();
     await Future.delayed(const Duration(milliseconds: 100));
-    debugPrint('Firebase services are ready');
   } catch (e) {
     debugPrint('Firebase initialization error: $e');
   }

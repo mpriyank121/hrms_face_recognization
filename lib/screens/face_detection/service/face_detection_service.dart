@@ -93,7 +93,14 @@ class FaceRecognitionService {
     }
 
     final formData = FormData.fromMap(formDataMap);
-
+    print('---📤 Sending FormData to Backend ---');
+    formDataMap.forEach((key, value) {
+      if (value is MultipartFile) {
+        print('$key: [File] ${value.filename}');
+      } else {
+        print('$key: $value');
+      }
+    });
     try {
       final response = await dio.post(ApiConstants.face, data: formData);
       final data = response.data;
@@ -121,6 +128,8 @@ class FaceRecognitionService {
         'emp_id': data['emp_id'] ?? dataMap?['emp_id'],
         'message': data['message'] ?? '',
         'early_checkout_status': data['early_checkout_status'],
+        'show_popup': data['show_popup'] == true, // ✅ ADD THIS
+
       };
     } catch (e, stackTrace) {
       if (kDebugMode) {

@@ -11,7 +11,6 @@ class FaceOverlayPainter extends CustomPainter {
     final path = Path()..addRect(Rect.fromLTWH(0, 0, size.width, size.height));
 
     final center = Offset(size.width / 2, size.height / 2);
-    // Adjusted for 3:4 aspect ratio - using height as reference for better fit
     final radius = size.height * 0.2;
 
     final circlePath = Path()..addOval(Rect.fromCircle(center: center, radius: radius));

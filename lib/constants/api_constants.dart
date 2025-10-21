@@ -4,9 +4,7 @@ class ApiConstants {
   static const String users = '${baseUrl}users.php';
   static const String registration = '${baseUrl}registration.php';
   static const String apis = '${baseUrl}registration.php';
-  // Home/Organization
   static const String home = '${baseUrl}home.php';
-  // Employee Management
   static const String employee = '${baseUrl}employee.php';
   static const String punchInOut = '${baseUrl}punchInOut.php';
   static const String policy = '${baseUrl}policy.php';
