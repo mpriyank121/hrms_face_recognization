@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../utils/pin_dialog.dart';
 import '../controllers/face_detection_controller.dart';
 import '../login/Widgets/avatar_painter.dart';
+import '../widgets/recognization_face_result.dart';
 
 class FaceDetectionView extends StatefulWidget {
   const FaceDetectionView({Key? key}) : super(key: key);
@@ -98,9 +99,9 @@ class _FaceDetectionViewState extends State<FaceDetectionView> {
           if (controller.isProcessing.value &&
               controller.recognitionSuccess.value == null)
             _buildProcessingIndicator(),
-          if (controller.recognitionSuccess.value != null &&
-              !controller.isPopupOpen.value)
-            _buildRecognitionResult(),
+
+          if (controller.recognitionSuccess.value != null)
+  RecognitionResultWidget(controller: controller),
           if (controller.isRegistrationMode.value &&
               controller.recognitionSuccess.value == null)
             _buildRegistrationButton(),
@@ -286,102 +287,7 @@ class _FaceDetectionViewState extends State<FaceDetectionView> {
     );
   }
 
-  Widget _buildRecognitionResult() {
-    final isSuccess = controller.recognitionSuccess.value ?? false;
-    final resultColor = isSuccess ? Colors.green : Colors.red;
 
-    return Positioned(
-      bottom: 80,
-      left: 16,
-      right: 16,
-      child: TweenAnimationBuilder(
-        duration: const Duration(milliseconds: 400),
-        tween: Tween<double>(begin: 0, end: 1),
-        builder: (context, double value, child) {
-          return Transform.scale(
-            scale: value,
-            child: Opacity(
-              opacity: value,
-              child: child,
-            ),
-          );
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                resultColor.withOpacity(0.9),
-                resultColor.withOpacity(0.7),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: resultColor.withOpacity(0.3),
-                blurRadius: 16,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                isSuccess ? Icons.check_circle_rounded : Icons.cancel_rounded,
-                color: Colors.white,
-                size: 36,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                isSuccess ? 'Recognized!' : 'Recognition Failed',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              if (isSuccess && controller.recognizedName.value != null) ...[
-                const SizedBox(height: 6),
-                Text(
-                  controller.recognizedName.value!,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                if (controller.recognizedCode.value != null) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    'EmpCode: ${controller.recognizedCode.value}',
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
-              ],
-              if (controller.apiMessage.value != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  controller.apiMessage.value!,
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 13,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
   Widget _buildRegistrationButton() {
     return Positioned(

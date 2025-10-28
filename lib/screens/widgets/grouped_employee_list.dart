@@ -65,93 +65,7 @@ class GroupedEmployeeList extends StatelessWidget {
 
                 // Employee list
                 ...employees.map((employee) {
-                  return ListTile(
-                    contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    leading: CircleAvatar(
-                      backgroundColor: Colors.grey.shade300,
-                      backgroundImage: (employee.empImage != null &&
-                          employee.empImage!.isNotEmpty)
-                          ? NetworkImage(employee.empImage!)
-                          : null,
-                      child: (employee.empImage == null ||
-                          employee.empImage!.isEmpty)
-                          ? Text(
-                        employee.empName.isNotEmpty
-                            ? employee.empName[0].toUpperCase()
-                            : '',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                        ),
-                      )
-                          : null,
-                    ),
-                    title: Text(
-                      employee.empName,
-                      style: FontStyles.subHeadingStyle(),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    subtitle: Text(
-                      employee.position,
-                      style: FontStyles.subTextStyle(),
-                    ),
-                    trailing: (employee.faceId.isEmpty)
-                    // Show Register button if face_id is empty
-                        ?PrimaryButton(
-                      heightFactor: 0.3,
-                      widthFactor: 0.2,
-                      onPressed: () async {
-                        if (onRegisterTap != null) {
-                          await onRegisterTap!(employee);
-                          await employeeController.refreshEmployees();
-                        }
-                        // no need for 'else { return; }' — function ends naturally here
-                      },
-                      text: 'Register',
-                    )
-                        : IconButton(
-                      onPressed: () async {
-                        // Optional: confirm deletion
-                        final confirm = await showDialog<bool>(
-                          context: context,
-                          builder: (_) => AlertDialog(
-                            title: const Text('Confirm Delete'),
-                            content: const Text(
-                                'Are you sure you want to delete this face?'),
-                            actions: [
-                              TextButton(
-                                onPressed: () =>
-                                    Navigator.of(context).pop(false),
-                                child: const Text('Cancel'),
-                              ),
-                              TextButton(
-                                onPressed: () =>
-                                    Navigator.of(context).pop(true),
-                                child: const Text('Delete'),
-                              ),
-                            ],
-                          ),
-                        );
-
-                        if (confirm == true) {
-                          await faceDetectionController.deleteFace(
-                            empId: employee.empId,
-                          );
-
-                          // Refresh employees to reflect change
-                          await employeeController.refreshEmployees();
-                        }
-                      },
-                      icon: const Icon(
-                        Icons.delete,
-                        color: Colors.red,
-                      ),
-                    ),
-                    onTap: null,
-                  );
+                  return _buildEmployeeCard(context, employee);
                 }).toList(),
               ],
             ),
@@ -159,5 +73,119 @@ class GroupedEmployeeList extends StatelessWidget {
         },
       );
     });
+  }
+
+  Widget _buildEmployeeCard(BuildContext context, EmployeeData employee) {
+    return Obx(() {
+      final isDeletingThis = faceDetectionController.deletingEmployeeId.value == employee.empId;
+
+      return Opacity(
+        opacity: isDeletingThis ? 0.6 : 1.0,
+        child: ListTile(
+          enabled: !isDeletingThis,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          leading: CircleAvatar(
+            backgroundColor: Colors.grey.shade300,
+            backgroundImage: (employee.empImage != null && employee.empImage!.isNotEmpty)
+                ? NetworkImage(employee.empImage!)
+                : null,
+            child: (employee.empImage == null || employee.empImage!.isEmpty)
+                ? Text(
+              employee.empName.isNotEmpty ? employee.empName[0].toUpperCase() : '',
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
+            )
+                : null,
+          ),
+          title: Text(
+            employee.empName,
+            style: FontStyles.subHeadingStyle(),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          subtitle: Text(
+            employee.position,
+            style: FontStyles.subTextStyle(),
+          ),
+          trailing: _buildTrailingWidget(context, employee, isDeletingThis),
+          onTap: null,
+        ),
+      );
+    });
+  }
+
+  Widget _buildTrailingWidget(BuildContext context, EmployeeData employee, bool isDeletingThis) {
+    if (employee.faceId.isEmpty) {
+      // Show Register button if face_id is empty
+      return PrimaryButton(
+        textSize: 12,
+        heightFactor: 0.2,
+        widthFactor: 0.2,
+        onPressed: () async {
+          if (onRegisterTap != null) {
+            await onRegisterTap!(employee);
+            await employeeController.refreshEmployees();
+          }
+        },
+        text: 'Register',
+      );
+    }
+
+    // Show delete button or loading indicator
+    if (isDeletingThis) {
+      return const SizedBox(
+        width: 24,
+        height: 24,
+        child: CircularProgressIndicator(
+          strokeWidth: 2.5,
+          valueColor: AlwaysStoppedAnimation<Color>(Colors.red),
+        ),
+      );
+    }
+
+    return IconButton(
+      onPressed: () async {
+        // Confirm deletion
+        final confirm = await showDialog<bool>(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: const Text('Confirm Delete'),
+            content: Text('Are you sure you want to delete face data for ${employee.empName}?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                child: const Text('Delete'),
+              ),
+            ],
+          ),
+        );
+
+        if (confirm == true) {
+          // Set loading state immediately
+          faceDetectionController.deletingEmployeeId.value = employee.empId;
+
+          // Delete face
+          await faceDetectionController.deleteFace(empId: employee.empId);
+
+          // Refresh employees
+          await employeeController.refreshEmployees();
+
+          // Clear loading state
+          faceDetectionController.deletingEmployeeId.value = null;
+        }
+      },
+      icon: const Icon(
+        Icons.delete,
+        color: Colors.red,
+      ),
+    );
   }
 }

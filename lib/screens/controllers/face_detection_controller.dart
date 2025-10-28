@@ -30,6 +30,10 @@ class FaceDetectionController extends GetxController {
   final recognizedCode = Rxn<String>();
   final recognitionSuccess = Rxn<bool>();
   final enteredEmpCode = ''.obs;
+  final deletingEmployeeId = Rxn<String>();
+
+  final apiTimer = 3.obs; // default duration
+
 
 
   bool _isStreamActive = false;
@@ -82,7 +86,16 @@ class FaceDetectionController extends GetxController {
     _isStreamActive = true;
     _startFaceDetectionStream();
   }
-
+  void updateApiTimer(dynamic value) {
+    try {
+      if (value == null) return;
+      final parsedValue = int.tryParse(value.toString()) ?? 3;
+      apiTimer.value = parsedValue;
+      print('⏱️ API timer updated to ${apiTimer.value} seconds');
+    } catch (e) {
+      print('⚠️ Failed to update API timer: $e');
+    }
+  }
   Future<void> _startFaceDetectionStream() async {
     final faceDetector = FaceDetector(
       options: FaceDetectorOptions(
@@ -187,7 +200,7 @@ class FaceDetectionController extends GetxController {
         }
 
         // Show success result
-        await _delayedClear(3);
+        
       } else {
         // Handle unrecognized face with show_popup check
         print('❌ Face not recognized');
@@ -211,14 +224,14 @@ class FaceDetectionController extends GetxController {
           // Just show the error message without popup
           recognitionSuccess.value = false;
           apiMessage.value = result['message'] ?? 'Recognition failed';
-          await _delayedClear(3);
+          
         }
       }
     } catch (e, stackTrace) {
       print('❌ Recognition error: $e\n$stackTrace');
       recognitionSuccess.value = false;
       apiMessage.value = 'Error: $e';
-      await _delayedClear(3);
+      
     } finally {
       isProcessing.value = false;
       await _deleteFile(file);
@@ -267,17 +280,17 @@ class FaceDetectionController extends GetxController {
       // ✅ Normal success/failure path
       if (success || faceRecognized) {
         print('✅ Manual recognition successful');
-        await _delayedClear(3);
+        
       } else {
         print('❌ Invalid employee code');
         apiMessage.value = result['message'] ?? 'Invalid employee code';
-        await _delayedClear(3);
+        
       }
     } catch (e, stackTrace) {
       print('❌ Manual recognition error: $e\n$stackTrace');
       recognitionSuccess.value = false;
       apiMessage.value = 'Error verifying code';
-      await _delayedClear(3);
+      
     } finally {
       isProcessing.value = false;
     }
@@ -448,12 +461,12 @@ class FaceDetectionController extends GetxController {
       recognitionSuccess.value = result['success'] == true || result['recognized'] == true;
       apiMessage.value = result['message'] ?? (recognitionSuccess.value! ? 'Early checkout successful' : 'Early checkout failed');
 
-      await _delayedClear(3);
+      
     } catch (e, stackTrace) {
       print('❌ Early checkout error: $e\n$stackTrace');
       recognitionSuccess.value = false;
       apiMessage.value = 'Early checkout error: $e';
-      await _delayedClear(3);
+      
     } finally {
       enteredEmpCode.value = ''; // Clear after use
     }
@@ -494,13 +507,13 @@ class FaceDetectionController extends GetxController {
         recognitionSuccess.value = false;
         apiMessage.value = result['message'] ?? 'Registration failed';
         print('❌ Registration failed: ${result['message']}');
-        await _delayedClear(3);
+        
       }
     } catch (e) {
       print('❌ Registration error: $e');
       recognitionSuccess.value = false;
       apiMessage.value = 'Registration error: $e';
-      await _delayedClear(3);
+      
     } finally {
       isProcessing.value = false;
       await _deleteFile(file);
@@ -575,10 +588,10 @@ class FaceDetectionController extends GetxController {
     recognizedCode.value = null;
   }
 
-  Future<void> _delayedClear(int seconds) async {
-    await Future.delayed(Duration(seconds: seconds));
-    _clearRecognitionState();
-  }
+  // Future<void> _delayedClear(int seconds) async {
+  //   await Future.delayed(Duration(seconds: seconds));
+  //   _clearRecognitionState();
+  // }
 
   Future<void> _deleteFile(File? file) async {
     try {

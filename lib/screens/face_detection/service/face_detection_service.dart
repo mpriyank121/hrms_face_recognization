@@ -3,12 +3,15 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
+import 'package:get/get.dart' hide FormData, MultipartFile;
+import 'package:get/get_core/src/get_main.dart';
 import 'package:hrms_face_recognization/constants/api_constants.dart';
 import 'package:dio/dio.dart';
 import '../../../core/encryption/encryption_helper.dart';
 import '../../../utils/dio_client.dart';
 import '../../../utils/location_helper.dart';
 import '../../../utils/shared_pref_helper.dart';
+import '../../controllers/app_controller.dart';
 
 class FaceRecognitionService {
   static Future<Map<String, dynamic>> registerFace({
@@ -166,6 +169,11 @@ class FaceRecognitionService {
       print('[DEBUG] Response Status: ${response.statusCode}');
       print('[DEBUG] Response Data: ${response.data}');
       final data = response.data['data'];
+      final appController = Get.isRegistered<AppController>()
+          ? Get.find<AppController>()
+          : Get.put(AppController());
+      appController.updateApiTimer(response.data['timer']);
+
 
       return response.data;
 

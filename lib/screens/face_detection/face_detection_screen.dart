@@ -247,7 +247,13 @@ class _FaceDetectionScreenState extends State<FaceDetectionScreen> {
   }
 
   Widget _buildEmployeeList() {
-    return Scaffold(
+    return WillPopScope(
+        onWillPop: () async {
+          // When system back button is pressed
+          faceDetectionController.setRegistrationMode(false);
+          return false; // Prevent default pop — controller handles it
+        },
+    child: Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
         elevation: 0,
@@ -275,6 +281,6 @@ class _FaceDetectionScreenState extends State<FaceDetectionScreen> {
           },
         ),
       ),
-    );
+    ));
   }
 }

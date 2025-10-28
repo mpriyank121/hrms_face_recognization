@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:hrms_face_recognization/screens/controllers/app_controller.dart';
 import 'package:hrms_face_recognization/screens/controllers/location_controller.dart';
 import 'package:hrms_face_recognization/screens/face_detection/face_detection_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -15,6 +16,7 @@ import 'config/theme.dart';
 // 🚀 Entry Point
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  Get.put(AppController(), permanent: true);
 
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
