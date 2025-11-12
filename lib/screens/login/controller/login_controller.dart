@@ -30,7 +30,6 @@ class AuthController extends GetxController {
     if (phone.isEmpty || phone.length != 10 || !RegExp(r'^[0-9]+$').hasMatch(phone)) {
       CustomToast.showMessage(
         context: context,
-
         message: "Please enter a valid 10-digit phone number",
         isError: true,
       );
@@ -44,15 +43,25 @@ class AuthController extends GetxController {
       otpController.clear();
 
       final response = await OrganizationLoginAuth.sendOtp(phone);
+      print('OTP Response: $response');
 
       if (response['status'] == true) {
-        isOtpSent.value = true;
-        isPhoneVerified.value = false;
+        final userType = response['userType']?.toString().toLowerCase();
 
+        // ✅ Allow login only if usertype is "organization"
+        if (userType == 'organization') {
+          isOtpSent.value = true;
+          isPhoneVerified.value = false;
+        } else {
+          CustomToast.showMessage(
+            context: context,
+            message: "You are not allowed to login with this account.",
+            isError: true,
+          );
+        }
       } else {
         CustomToast.showMessage(
           context: context,
-
           message: response['message'] ?? "Failed to send OTP",
           isError: true,
         );
@@ -60,7 +69,6 @@ class AuthController extends GetxController {
     } catch (e) {
       CustomToast.showMessage(
         context: context,
-
         message: e.toString(),
         isError: true,
       );
@@ -68,6 +76,7 @@ class AuthController extends GetxController {
       isLoading.value = false;
     }
   }
+
 
   /// Verify OTP
   Future<void> verifyUserOtp(BuildContext context) async {

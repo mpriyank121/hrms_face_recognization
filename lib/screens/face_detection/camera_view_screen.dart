@@ -60,7 +60,16 @@ class _FaceDetectionViewState extends State<FaceDetectionView> {
       return true;
     }
 
+    // Block API calls before showing PIN dialog
+    controller.blockAPICalls(reason: 'PIN dialog opening');
+    controller.isPopupOpen.value = true;
+
     final shouldExit = await showPinDialog(context);
+
+    // Block API calls after PIN dialog closes
+    controller.isPopupOpen.value = false;
+    controller.blockAPICalls(reason: 'PIN dialog closed');
+
     if (shouldExit == true) {
       await controller.closeCamera();
       return true;
@@ -101,7 +110,7 @@ class _FaceDetectionViewState extends State<FaceDetectionView> {
             _buildProcessingIndicator(),
 
           if (controller.recognitionSuccess.value != null)
-  RecognitionResultWidget(controller: controller),
+            RecognitionResultWidget(controller: controller),
           if (controller.isRegistrationMode.value &&
               controller.recognitionSuccess.value == null)
             _buildRegistrationButton(),
@@ -161,13 +170,18 @@ class _FaceDetectionViewState extends State<FaceDetectionView> {
   Widget _buildFaceOverlays() {
     return Stack(
       children: [
-        CustomPaint(
-          painter: FaceOverlayPainter(),
+        // Dark overlay outside circle
+        Obx(() => CustomPaint(
+          painter: CircleOverlayPainter(
+            isFaceInCircle: controller.isFaceInCircle.value,
+          ),
           size: Size.infinite,
-        ),
+        )),
+        // Animated face outline
         Obx(() => AnimatedFaceOutline(
           isProcessing: controller.isProcessing.value,
           isSuccess: controller.recognitionSuccess.value,
+          isFaceInCircle: controller.isFaceInCircle.value,
         )),
       ],
     );
@@ -220,23 +234,60 @@ class _FaceDetectionViewState extends State<FaceDetectionView> {
       left: 20,
       right: 20,
       child: Center(
-        child: Text(
-          controller.isRegistrationMode.value
-              ? "Position your face in the frame"
-              : "Scanning for registered faces...",
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            shadows: [
-              Shadow(
-                color: Colors.black,
-                blurRadius: 10,
-              ),
-            ],
-          ),
-        ),
+        child: Obx(() {
+          String instruction;
+          Color bgColor;
+          IconData icon;
+
+          if (controller.isRegistrationMode.value) {
+            instruction = "Position your face in the frame";
+            bgColor = Colors.blue;
+            icon = Icons.center_focus_strong;
+          } else if (controller.isFaceInCircle.value) {
+            instruction = "Hold still - Scanning...";
+            bgColor = Colors.green;
+            icon = Icons.face;
+          } else if (controller.isFaceDetected.value) {
+            instruction = "Move into the circle";
+            bgColor = Colors.orange;
+            icon = Icons.my_location;
+          } else {
+            instruction = "Position your face in the circle";
+            bgColor = Colors.blue;
+            icon = Icons.face_retouching_natural;
+          }
+
+          return Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            decoration: BoxDecoration(
+              color: bgColor.withOpacity(0.9),
+              borderRadius: BorderRadius.circular(25),
+              boxShadow: [
+                BoxShadow(
+                  color: bgColor.withOpacity(0.3),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, color: Colors.white, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  instruction,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
       ),
     );
   }
@@ -286,8 +337,6 @@ class _FaceDetectionViewState extends State<FaceDetectionView> {
       ),
     );
   }
-
-
 
   Widget _buildRegistrationButton() {
     return Positioned(
@@ -349,7 +398,10 @@ class _FaceDetectionViewState extends State<FaceDetectionView> {
       child: ElevatedButton(
         onPressed: controller.isProcessing.value
             ? null
-            : () => controller.captureAndRegister(),
+            : () {
+          controller.blockAPICalls(reason: 'Manual capture button pressed');
+          controller.captureAndRegister();
+        },
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.transparent,
           shadowColor: Colors.transparent,

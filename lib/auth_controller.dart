@@ -65,7 +65,6 @@ class OrganizationLoginAuth {
     final jsonResponse = response.data;
     print("${jsonResponse}");
     if (jsonResponse['status'] == true) {
-
       return jsonResponse;
     } else {
       throw ('${jsonResponse['message'] ?? 'Unknown error'}');
