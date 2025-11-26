@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'dart:convert';
-import 'dart:math';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart' hide FormData, MultipartFile;
@@ -19,7 +18,7 @@ class FaceRecognitionService {
     required File imageFile,
   }) async {
     final companyId = await SharedPrefHelper.getCompanyId();
-    final encryptedType = EncryptionHelper.encryptString('registerFace');
+    final encryptedType = EncryptionHelper.encryptString('register_face');
     final encryptedEmpId = EncryptionHelper.encryptString(empId);
 
     final dio = DioClient().client;
@@ -29,7 +28,7 @@ class FaceRecognitionService {
       'type': encryptedType,
       'org_id': companyId,
       'emp_id': encryptedEmpId,
-      'image': await MultipartFile.fromFile(
+      'image_path': await MultipartFile.fromFile(
         imageFile.path,
         filename: 'face_${DateTime.now().millisecondsSinceEpoch}.jpg',
       ),
@@ -38,7 +37,7 @@ class FaceRecognitionService {
       print('🗝️ ${field.key}: ${field.value}');
     });
     try {
-      final response = await dio.post(ApiConstants.face, data: formData);
+      final response = await dio.post(ApiConstants.home, data: formData);
       final data = response.data;
 
       if (kDebugMode) {
@@ -62,7 +61,7 @@ class FaceRecognitionService {
     String? empCode,
     required File imageFile,
   }) async {
-    final encryptedType = EncryptionHelper.encryptString('recognizeFace');
+    final encryptedType = EncryptionHelper.encryptString('verify_face');
     final companyId = await SharedPrefHelper.getCompanyId();
     final latitude = await LocationHelper.getLatitude();
     final longitude = await LocationHelper.getLongitude();
@@ -76,7 +75,7 @@ class FaceRecognitionService {
     final formDataMap = {
       'type': encryptedType,
       'org_id': companyId,
-      'image': await MultipartFile.fromFile(
+      'image_path': await MultipartFile.fromFile(
         imageFile.path,
         filename: 'face_${DateTime.now().millisecondsSinceEpoch}.jpg',
       ),
@@ -105,7 +104,7 @@ class FaceRecognitionService {
       }
     });
     try {
-      final response = await dio.post(ApiConstants.face, data: formData);
+      final response = await dio.post(ApiConstants.home, data: formData);
       final data = response.data;
 
       if (kDebugMode) debugPrint("📥 Recognize Face Response: $data");
@@ -155,7 +154,7 @@ class FaceRecognitionService {
     if (headers != null) {
       DioClient().setHeaders();
     }
-    final encryptedType = EncryptionHelper.encryptString('getEmpFaceRegistry');
+    final encryptedType = EncryptionHelper.encryptString('getEmpFaceEmbiddings');
     final formData = FormData.fromMap({
       'type': encryptedType,
       'c_id': companyId,
@@ -186,7 +185,7 @@ class FaceRecognitionService {
     required String empId,
   }) async {
     try {
-      final encryptedType = EncryptionHelper.encryptString('deleteFace');
+      final encryptedType = EncryptionHelper.encryptString('delete_face_embiddings');
       final encryptedEmpId = EncryptionHelper.encryptString(empId);
       final companyId = await SharedPrefHelper.getCompanyId();
 
@@ -194,14 +193,14 @@ class FaceRecognitionService {
       final formData = FormData.fromMap({
         'type': encryptedType,
         'emp_id': encryptedEmpId,
-        'org_id': companyId,
+        //'org_id': companyId,
       });
 
       debugPrint("📤 Sending deleteFace request...");
       debugPrint("🧩 FormData: ${formData.fields}");
 
       final response = await Dio().post(
-        ApiConstants.face,
+        ApiConstants.home,
         data: formData,
         options: Options(responseType: ResponseType.json),
       );

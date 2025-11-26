@@ -6,11 +6,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:hrms_face_recognization/screens/controllers/app_controller.dart';
 import 'package:hrms_face_recognization/screens/controllers/location_controller.dart';
 import 'package:hrms_face_recognization/screens/face_detection/face_detection_screen.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:hrms_face_recognization/screens/wlecome_page.dart';
 import 'package:hrms_face_recognization/utils/custom_splash_screen.dart';
 import 'package:hrms_face_recognization/utils/dio_client.dart';
-
 import 'config/theme.dart';
 
 // 🚀 Entry Point

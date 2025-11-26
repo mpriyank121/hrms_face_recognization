@@ -1,8 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/svg.dart';
 import 'package:get/get.dart';
-import 'package:hrms_face_recognization/utils/shared_pref_helper.dart';
 import 'package:hrms_face_recognization/utils/update_dialog.dart';
 import 'package:hrms_face_recognization/utils/update_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';

@@ -58,7 +58,7 @@ class EmployeeData {
       empImage: json['emp_image'], // can be null
       position: json['emp_pos'] ?? '',
       empCode: json['emp_code'] ?? '',
-      faceId: json['face_id'] ?? '',
+      faceId: json['embedding'] ?? '',
     );
   }
 

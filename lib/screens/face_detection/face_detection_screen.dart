@@ -32,10 +32,8 @@ class _FaceDetectionScreenState extends State<FaceDetectionScreen> {
     super.initState();
     locationController.fetchCurrentLocationWithDetails();
 
-    // Listen to registration mode changes to refresh employees
     ever(faceDetectionController.isRegistrationMode, (isRegistration) {
       if (isRegistration) {
-        // Fetch employees when entering registration mode
         employeeController.refreshEmployees();
       }
     });
@@ -78,10 +76,59 @@ class _FaceDetectionScreenState extends State<FaceDetectionScreen> {
 
   Widget _buildModeSelection() {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
-      appBar: CustomAppBar(
-        title: 'Face Recognition',
-        showBackButton: false,
+      backgroundColor: const Color(0xFFF8F9FD),
+      appBar: AppBar(
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        automaticallyImplyLeading: false,
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.deepOrange, Colors.deepOrange[700]!],
+                ),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.deepOrange.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.fingerprint_rounded,
+                color: Colors.white,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'FaceTime',
+                  style: TextStyle(
+                    color: Color(0xFF2D3748),
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                Text(
+                  'HRMS Attendance',
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 8.0),
@@ -92,8 +139,12 @@ class _FaceDetectionScreenState extends State<FaceDetectionScreen> {
                 decoration: BoxDecoration(
                   color: Colors.red.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.red.withOpacity(0.2),
+                    width: 1,
+                  ),
                 ),
-                child: const Icon(Icons.logout, color: Colors.red, size: 22),
+                child: const Icon(Icons.logout_rounded, color: Colors.red, size: 20),
               ),
               tooltip: 'Logout',
             ),
@@ -101,86 +152,238 @@ class _FaceDetectionScreenState extends State<FaceDetectionScreen> {
         ],
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              children: [
+                const SizedBox(height: 10),
+                // Hero Section
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.deepOrange[400]!,
+                        Colors.deepOrange[600]!,
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.deepOrange.withOpacity(0.4),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.25),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.face_retouching_natural,
+                            size: 48,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      const Text(
+                        'Welcome Back!',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 26,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Choose an option to continue',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.95),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 32),
+
+                // Action Cards
+                _buildActionCard(
+                  icon: Icons.person_add_alt_1_rounded,
+                  title: "Register Face",
+                  subtitle: "Add new employee to the system",
+                  color: Colors.blue,
+                  onTap: () {
+                    faceDetectionController.setRegistrationMode(true);
+                  },
+                ),
+
+                const SizedBox(height: 16),
+
+                _buildActionCard(
+                  icon: Icons.verified_user_rounded,
+                  title: "Auto Punch In/Out",
+                  subtitle: "Quick attendance with face scan",
+                  color: Colors.green,
+                  onTap: () async {
+                    faceDetectionController.setRegistrationMode(false);
+                    await faceDetectionController.openCamera();
+                  },
+                ),
+
+                const SizedBox(height: 24),
+
+                // Info Card
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: Colors.amber.withOpacity(0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.info_outline_rounded,
+                        color: Colors.amber[700],
+                        size: 24,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Ensure good lighting for better face recognition',
+                          style: TextStyle(
+                            color: Colors.amber[900],
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionCard({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: color.withOpacity(0.2),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: color.withOpacity(0.1),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
             children: [
-              const SizedBox(height: 20),
               Container(
-                padding: const EdgeInsets.all(24),
+                padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Colors.deepOrange.withOpacity(0.2), Colors.deepOrange[500]!],
+                    colors: [color, color.withOpacity(0.7)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.deepOrange.withOpacity(0.3),
-                      blurRadius: 30,
-                      offset: const Offset(0, 10),
+                      color: color.withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
                     ),
                   ],
                 ),
+                child: Icon(icon, size: 28, color: Colors.white),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.face_retouching_natural,
-                        size: 60,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Welcome',
+                    Text(
+                      title,
                       style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
+                        color: Color(0xFF2D3748),
+                        fontSize: 17,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 4),
                     Text(
-                      'Choose your action below',
+                      subtitle,
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.9),
-                        fontSize: 14,
+                        color: Colors.grey[600],
+                        fontSize: 13,
+                        fontWeight: FontWeight.w400,
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 40),
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    BorderedContainer(child: _buildModernModeCard(
-                      icon: Icons.person_add_alt_1,
-                      title: "Register Face",
-                      subtitle: "Add new employee face data",
-                      onTap: () {
-                        faceDetectionController.setRegistrationMode(true);
-                      },
-                    ),),
-                    const SizedBox(height: 20),
-                    BorderedContainer(child: _buildModernModeCard(
-                      icon: Icons.login_rounded,
-                      title: "Auto Punch In/Out",
-                      subtitle: "Quick attendance with face scan",
-                      onTap: () async {
-                        faceDetectionController.setRegistrationMode(false);
-                        await faceDetectionController.openCamera();
-                      },
-                    ),)
-                  ],
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  color: color,
+                  size: 16,
                 ),
               ),
             ],
@@ -190,61 +393,6 @@ class _FaceDetectionScreenState extends State<FaceDetectionScreen> {
     );
   }
 
-  Widget _buildModernModeCard({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.all(24),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.deepOrange,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Icon(icon, size: 32, color: Colors.white),
-            ),
-            const SizedBox(width: 20),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      color: Colors.deepOrange,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      color: Colors.deepOrange,
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(
-              Icons.arrow_forward_ios,
-              color: Colors.deepOrange,
-              size: 20,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _buildEmployeeList() {
     return WillPopScope(

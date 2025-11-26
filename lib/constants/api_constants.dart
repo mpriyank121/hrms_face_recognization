@@ -1,6 +1,6 @@
 
 class ApiConstants {
-  static const String baseUrl = 'https://api.corehrx.com/';
+  static const String baseUrl = 'https://api-stg.corehrx.com/';
   static const String users = '${baseUrl}users.php';
   static const String registration = '${baseUrl}registration.php';
   static const String apis = '${baseUrl}registration.php';
