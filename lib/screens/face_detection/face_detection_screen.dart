@@ -1,11 +1,11 @@
 import 'dart:io';
 import 'dart:ui';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:hrms_face_recognization/config/App_margin.dart';
-import 'package:hrms_face_recognization/core/widgets/bordered_container.dart';
 import 'package:hrms_face_recognization/screens/controllers/location_controller.dart';
-import 'package:hrms_face_recognization/widgets/custom_app_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../utils/shared_pref_helper.dart';
 import '../controllers/employee_controller.dart';
@@ -31,7 +31,6 @@ class _FaceDetectionScreenState extends State<FaceDetectionScreen> {
   void initState() {
     super.initState();
     locationController.fetchCurrentLocationWithDetails();
-
     ever(faceDetectionController.isRegistrationMode, (isRegistration) {
       if (isRegistration) {
         employeeController.refreshEmployees();
@@ -62,6 +61,7 @@ class _FaceDetectionScreenState extends State<FaceDetectionScreen> {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
+
       if (faceDetectionController.showCamera.value) {
         return FaceDetectionView();
       }
@@ -73,6 +73,7 @@ class _FaceDetectionScreenState extends State<FaceDetectionScreen> {
       return _buildModeSelection();
     });
   }
+
 
   Widget _buildModeSelection() {
     return Scaffold(

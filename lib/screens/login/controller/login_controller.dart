@@ -155,8 +155,28 @@ class AuthController extends GetxController {
           message: "OTP Verified Successfully!",
           isError: false,
         );
+        if (data['face_reco'] == true) {
+          // 👉 Go to Face Detection screen
+          Get.offAll(() => FaceDetectionScreen(orgId: ''));
+        } else {
+          // 👉 Show popup to activate module
+          Get.dialog(
+            AlertDialog(
+              title: const Text("Module Not Activated"),
+              content: const Text("Please purchase this module to continue."),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Get.back(); // close popup
+                  },
+                  child: const Text("OK"),
+                ),
+              ],
+            ),
+            barrierDismissible: false,
+          );
+        }
 
-      Get.offAll(() =>  FaceDetectionScreen(orgId: '',));
       } else {
         CustomToast.showMessage(
           context: context,

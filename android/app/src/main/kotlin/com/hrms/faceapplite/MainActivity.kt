@@ -1,4 +1,4 @@
-package com.corehrx.lens
+package com.hrms.faceapplite
 
 import io.flutter.embedding.android.FlutterActivity
 

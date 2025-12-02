@@ -1,17 +1,12 @@
 import 'dart:async';
 import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:get/get_core/src/get_main.dart';
-import 'package:get/get_state_manager/src/rx_flutter/rx_obx_widget.dart';
-
 import '../controllers/app_controller.dart';
 import '../controllers/face_detection_controller.dart';
 
 class RecognitionResultWidget extends StatefulWidget {
   final FaceDetectionController controller;
-
 
   const RecognitionResultWidget({Key? key, required this.controller}) : super(key: key);
 
@@ -25,7 +20,7 @@ class _RecognitionResultWidgetState extends State<RecognitionResultWidget> {
   Timer? _clearTimer;
   bool? _lastSuccessState;
   String? _lastMessage;
-  int _resultCount = 0; // Track number of results to detect changes
+  int _resultCount = 0;
 
   @override
   void dispose() {
@@ -34,11 +29,12 @@ class _RecognitionResultWidgetState extends State<RecognitionResultWidget> {
   }
 
   void _startClearTimer() {
-    // Cancel any existing timer
     _clearTimer?.cancel();
 
-    // Start new 10-second timer
-    _clearTimer = Timer( Duration(seconds: appController.apiTimer.value), () {
+    // Notify controller that result is being displayed
+    widget.controller.onResultDisplayed();
+
+    _clearTimer = Timer(Duration(seconds: appController.apiTimer.value), () {
       if (mounted) {
         widget.controller.recognitionSuccess.value = null;
         widget.controller.recognizedName.value = null;
@@ -46,6 +42,10 @@ class _RecognitionResultWidgetState extends State<RecognitionResultWidget> {
         widget.controller.apiMessage.value = '';
         _lastSuccessState = null;
         _lastMessage = null;
+
+        // Notify controller that result is cleared
+        widget.controller.onResultCleared();
+        print('🎭 Result cleared - Resuming in 1 second...');
       }
     });
   }
@@ -57,7 +57,7 @@ class _RecognitionResultWidgetState extends State<RecognitionResultWidget> {
       final apiMessage = widget.controller.apiMessage.value;
       final recognizedName = widget.controller.recognizedName.value;
 
-      // Detect if this is a NEW result by checking if any key value changed
+      // Detect if this is a NEW result
       final currentMessage = '$isSuccess-$recognizedName-$apiMessage';
 
       if (isSuccess != null && currentMessage != _lastMessage) {
@@ -275,7 +275,6 @@ class _RecognitionResultWidgetState extends State<RecognitionResultWidget> {
           ),
         ),
       );
-
     });
   }
 }

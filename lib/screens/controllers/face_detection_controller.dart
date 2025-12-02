@@ -21,7 +21,7 @@ class FaceDetectionController extends GetxController {
   final deletionSuccess = false.obs;
   final apiMessage = ''.obs;
   final isFaceDetected = false.obs;
-  final isFaceInCircle = false.obs; // NEW: Track if face is in circle
+  final isFaceInCircle = false.obs;
   final showCamera = false.obs;
   final isRegistrationMode = false.obs;
   final isCameraInitialized = false.obs;
@@ -33,16 +33,19 @@ class FaceDetectionController extends GetxController {
   final enteredEmpCode = ''.obs;
   final deletingEmployeeId = Rxn<String>();
 
+  // NEW: Track if result widget is being displayed
+  final isResultDisplayed = false.obs;
+
   final apiTimer = 3.obs;
 
   bool _isStreamActive = false;
-  bool _wasFaceInCircle = false; // Track previous state
+  bool _wasFaceInCircle = false;
   DateTime? lastRecognitionTime;
   DateTime? _blockUntil;
 
   // Constants
-  static const int BLOCK_DURATION_MS = 2000; // 4 seconds block
-  static const int MIN_RECOGNITION_INTERVAL_MS = 2000; // 3 seconds between recognitions
+  static const int BLOCK_DURATION_MS = 2000;
+  static const int MIN_RECOGNITION_INTERVAL_MS = 2000;
 
   @override
   void onClose() {
@@ -50,7 +53,7 @@ class FaceDetectionController extends GetxController {
     super.onClose();
   }
 
-  /// Block all API calls for 4 seconds
+  /// Block all API calls for specified duration
   void blockAPICalls({String reason = 'UI interaction'}) {
     _blockUntil = DateTime.now().add(Duration(milliseconds: BLOCK_DURATION_MS));
     print('🚫 API BLOCKED for ${BLOCK_DURATION_MS}ms - Reason: $reason');
@@ -67,13 +70,18 @@ class FaceDetectionController extends GetxController {
       return true;
     }
 
-    // Block expired
     _blockUntil = null;
     return false;
   }
 
   /// Check if we can make an API call
   bool get canMakeAPICall {
+    // NEW: Block if result is being displayed
+    if (isResultDisplayed.value) {
+      print('🚫 Cannot call API - Result widget is displayed');
+      return false;
+    }
+
     // Check if blocked by timer
     if (isAPIBlocked) return false;
 
@@ -101,38 +109,43 @@ class FaceDetectionController extends GetxController {
     return true;
   }
 
+  /// Called when result widget appears
+  void onResultDisplayed() {
+    isResultDisplayed.value = true;
+    print('🎭 Result widget DISPLAYED - Freezing all operations');
+  }
+
+  /// Called when result widget disappears
+  void onResultCleared() {
+    isResultDisplayed.value = false;
+    Future.delayed(const Duration(seconds: 1), () {
+    });
+  }
+
   /// Check if face is within the circular boundary
   bool _isFaceInCircleBoundary(Face face, Size imageSize) {
-    // Get screen dimensions (assuming portrait mode)
     final screenWidth = Get.width;
     final screenHeight = Get.height;
 
-    // Calculate circle center and radius (adjust these based on your UI)
     final circleCenterX = screenWidth / 2;
-    final circleCenterY = screenHeight / 2.5; // Adjust vertical position
-    final circleRadius = screenWidth * 0.35; // Circle radius
+    final circleCenterY = screenHeight / 2.5;
+    final circleRadius = screenWidth * 0.35;
 
-    // Get face bounding box
     final faceRect = face.boundingBox;
 
-    // Calculate face center in screen coordinates
-    // ML Kit returns coordinates in image space, we need to map to screen space
     final scaleX = screenWidth / imageSize.width;
     final scaleY = screenHeight / imageSize.height;
 
     final faceCenterX = (faceRect.left + faceRect.width / 2) * scaleX;
     final faceCenterY = (faceRect.top + faceRect.height / 2) * scaleY;
 
-    // Calculate distance from face center to circle center
     final dx = faceCenterX - circleCenterX;
     final dy = faceCenterY - circleCenterY;
     final distance = (dx * dx + dy * dy).abs().toDouble();
     final distanceFromCenter = distance > 0 ? distance : 0.0;
 
-    // Check if face is within circle with some tolerance
     final isInside = distanceFromCenter <= (circleRadius * circleRadius);
 
-    // Also check if face is reasonably sized (not too far or too close)
     final faceSize = faceRect.width * scaleX;
     final isGoodSize = faceSize > screenWidth * 0.25 && faceSize < screenWidth * 0.7;
 
@@ -168,7 +181,6 @@ class FaceDetectionController extends GetxController {
       print('✅ Camera initialized successfully');
 
       if (!isRegistrationMode.value) {
-        // Wait 1 second before starting recognition
         await Future.delayed(const Duration(seconds: 1));
         startAutoRecognition();
       }
@@ -213,17 +225,22 @@ class FaceDetectionController extends GetxController {
 
     while (showCamera.value && _cameraController.value != null) {
       try {
+        // NEW: Skip detection if result is being displayed
+        if (isResultDisplayed.value) {
+          print('⏸️ Detection paused - Result displayed');
+          await Future.delayed(const Duration(milliseconds: 500));
+          continue;
+        }
+
         if (!_cameraController.value!.value.isInitialized) {
           await Future.delayed(const Duration(milliseconds: 200));
           continue;
         }
 
-        // Capture and detect faces
         final image = await _cameraController.value!.takePicture();
         final inputImage = InputImage.fromFilePath(image.path);
         final faces = await faceDetector.processImage(inputImage);
 
-        // Get image size for coordinate mapping
         final imageFile = File(image.path);
         final imageBytes = await imageFile.readAsBytes();
         final decodedImage = await decodeImageFromList(imageBytes);
@@ -234,7 +251,6 @@ class FaceDetectionController extends GetxController {
         final faceCount = faces.length;
 
         if (faceCount == 0) {
-          // No face detected
           isFaceDetected.value = false;
           isFaceInCircle.value = false;
           _wasFaceInCircle = false;
@@ -243,7 +259,6 @@ class FaceDetectionController extends GetxController {
         }
 
         if (faceCount > 1) {
-          // Multiple faces detected - skip
           print('⚠️ Multiple faces detected (${faceCount}) - skipping recognition');
           isFaceDetected.value = true;
           isFaceInCircle.value = false;
@@ -252,7 +267,6 @@ class FaceDetectionController extends GetxController {
           continue;
         }
 
-        // Exactly 1 face detected - check if it's in the circle
         final face = faces.first;
         final isInCircle = _isFaceInCircleBoundary(face, imageSize);
 
@@ -262,7 +276,6 @@ class FaceDetectionController extends GetxController {
         if (isInCircle) {
           print('🎯 Face is IN the circle');
 
-          // Only trigger recognition when face ENTERS the circle (not already in)
           if (!_wasFaceInCircle && canMakeAPICall) {
             print('✨ Face ENTERED circle - triggering recognition!');
             _wasFaceInCircle = true;
@@ -275,7 +288,6 @@ class FaceDetectionController extends GetxController {
           _wasFaceInCircle = false;
         }
 
-        // Wait before next detection
         await Future.delayed(const Duration(milliseconds: 500));
 
       } catch (e) {
@@ -293,7 +305,6 @@ class FaceDetectionController extends GetxController {
   }
 
   Future<void> captureAndRecognize() async {
-    // Triple check before proceeding
     if (!canMakeAPICall) {
       print('🚫 captureAndRecognize blocked - conditions not met');
       return;
@@ -328,13 +339,11 @@ class FaceDetectionController extends GetxController {
       apiMessage.value = result['message'] ?? '';
       recognitionSuccess.value = punchSuccess;
 
-      // Block API calls while showing result
       blockAPICalls(reason: 'Showing recognition result');
 
       if (faceRecognized) {
         print('✅ Face recognized: ${recognizedName.value}');
 
-        // Handle early checkout
         if (message.contains('early checkout')) {
           isProcessing.value = false;
           enteredEmpCode.value = '';
@@ -362,12 +371,12 @@ class FaceDetectionController extends GetxController {
           recognitionSuccess.value = false;
           apiMessage.value = result['message'] ?? 'Face not recognized';
 
-          // Show result briefly before dialog
           await Future.delayed(const Duration(seconds: 1));
           isProcessing.value = false;
 
           blockAPICalls(reason: 'Employee code dialog');
           final empCode = await _showEmployeeCodeDialog();
+
           blockAPICalls(reason: 'Employee code dialog closed');
 
           if (empCode != null && empCode.isNotEmpty) {
@@ -576,11 +585,12 @@ class FaceDetectionController extends GetxController {
     return result;
   }
 
-  Future<bool?> _showEarlyCheckoutDialog() async {
+
+  Future _showEarlyCheckoutDialog() async {
     isPopupOpen.value = true;
     print('🔒 Early checkout dialog OPENED');
 
-    final result = await Get.dialog<bool>(
+    final result = await Get.dialog(
       CupertinoAlertDialog(
         title: const Text('Early Checkout'),
         content: Obx(() {
@@ -606,7 +616,15 @@ class FaceDetectionController extends GetxController {
     );
 
     isPopupOpen.value = false;
-    print('🔓 Early checkout dialog CLOSED');
+    print('🔓 Early checkout dialog CLOSED with result: $result');
+
+    // FIX: Clear result display state when dialog closes
+    // This ensures detection resumes even if user pressed "No"
+    if (result == false || result == null) {
+      print('✅ User cancelled - clearing result display state');
+      isResultDisplayed.value = false;
+      _clearRecognitionState();
+    }
 
     return result;
   }
@@ -741,6 +759,7 @@ class FaceDetectionController extends GetxController {
     _wasFaceInCircle = false;
     _clearRecognitionState();
     _blockUntil = null;
+    isResultDisplayed.value = false;
     print('✅ Camera closed');
   }
 

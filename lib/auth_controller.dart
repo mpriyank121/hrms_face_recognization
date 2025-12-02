@@ -54,7 +54,6 @@ class OrganizationRegisterAuth {
 class OrganizationLoginAuth {
   static const String _baseUrl = ApiConstants.users;
 
-  /// Send OTP to a phone number (already encoded)
   static Future<Map<String, dynamic>> sendOtp(String Phone) async {
     final dio = DioClient().client;
     final formData = FormData.fromMap({
