@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:audioplayers/audioplayers.dart';
 import '../controllers/app_controller.dart';
 import '../controllers/face_detection_controller.dart';
 
@@ -16,6 +17,7 @@ class RecognitionResultWidget extends StatefulWidget {
 
 class _RecognitionResultWidgetState extends State<RecognitionResultWidget> {
   final appController = Get.find<AppController>();
+  final AudioPlayer _audioPlayer = AudioPlayer();
 
   Timer? _clearTimer;
   bool? _lastSuccessState;
@@ -25,7 +27,21 @@ class _RecognitionResultWidgetState extends State<RecognitionResultWidget> {
   @override
   void dispose() {
     _clearTimer?.cancel();
+    _audioPlayer.dispose();
     super.dispose();
+  }
+
+  Future<void> _playSound(bool isSuccess) async {
+    try {
+      await _audioPlayer.stop();
+      if (isSuccess) {
+        await _audioPlayer.play(AssetSource('sounds/checkin_success.mp3'));
+      } else {
+        await _audioPlayer.play(AssetSource('sounds/checkin_error.mp3'));
+      }
+    } catch (e) {
+      print('Error playing sound: $e');
+    }
   }
 
   void _startClearTimer() {
@@ -65,6 +81,10 @@ class _RecognitionResultWidgetState extends State<RecognitionResultWidget> {
         _lastSuccessState = isSuccess;
         _resultCount++;
         print('🆕 New result detected (#$_resultCount): Success=$isSuccess, Name=$recognizedName');
+
+        // Play sound based on success/failure
+        _playSound(isSuccess);
+
         _startClearTimer();
       }
 

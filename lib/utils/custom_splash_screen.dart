@@ -5,6 +5,8 @@ import 'package:hrms_face_recognization/utils/update_dialog.dart';
 import 'package:hrms_face_recognization/utils/update_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../screens/face_detection/service/module_service.dart';
+
 
 class CustomSplashScreen extends StatefulWidget {
   const CustomSplashScreen({super.key});
@@ -168,7 +170,7 @@ class _CustomSplashScreenState extends State<CustomSplashScreen>
 
     try {
       print("🔍 Checking app version...");
-      // Call version check
+      final isAiFaceEnabled = await ModuleService.fetchOrganizationModules();
       final versionResult = await CheckAppVersionService.checkAppVersion();
       if (versionResult != null && versionResult['check'] == 1) {
         final mandatory = versionResult['mandatory'] == '1';

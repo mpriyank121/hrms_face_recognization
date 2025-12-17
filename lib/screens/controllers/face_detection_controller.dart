@@ -7,11 +7,14 @@ import 'package:flutter/material.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import '../models/employee_model.dart';
 import 'employee_controller.dart';
+import 'module_controller.dart';
 
 class FaceDetectionController extends GetxController {
   final Rxn<CameraController> _cameraController = Rxn<CameraController>();
   final employeeController = Get.put(EmployeeController());
-
+  final moduleController = Get.isRegistered<ModuleController>()
+      ? Get.find<ModuleController>()
+      : Get.put(ModuleController());
   CameraController? get cameraController => _cameraController.value;
 
   // Observable states
@@ -279,7 +282,13 @@ class FaceDetectionController extends GetxController {
           if (!_wasFaceInCircle && canMakeAPICall) {
             print('✨ Face ENTERED circle - triggering recognition!');
             _wasFaceInCircle = true;
-            await captureAndRecognize();
+            if (moduleController.hasModuleById(17)) {
+              await captureAndRecognizeWithAws();
+            }
+            else
+              {
+                await captureAndRecognize();
+              }
           } else if (_wasFaceInCircle) {
             print('👤 Face still in circle - waiting');
           }
@@ -704,7 +713,105 @@ class FaceDetectionController extends GetxController {
       await _deleteFile(file);
     }
   }
+  Future<void> captureAndRecognizeWithAws() async {
+    // Triple check before proceeding
+    if (!canMakeAPICall) {
+      print('🚫 captureAndRecognize blocked - conditions not met');
+      return;
+    }
 
+    if (_cameraController.value == null || !_cameraController.value!.value.isInitialized) {
+      print('🚫 Camera not ready');
+      return;
+    }
+
+    print('📸 Starting capture and recognize...');
+    isProcessing.value = true;
+    blockAPICalls(reason: 'Recognition started');
+    File? file;
+
+    try {
+      final image = await _cameraController.value!.takePicture();
+      file = File(image.path);
+      print('📸 Image captured: ${image.path}');
+
+      final result = await FaceRecognitionService.recognizeFaceWithAws(imageFile: file);
+      lastRecognitionTime = DateTime.now();
+      print('📊 Recognition API response: $result');
+
+      final punchSuccess = result['success'] == true;
+      final faceRecognized = result['recognized'] == true;
+      final message = (result['message'] ?? '').toString().toLowerCase();
+
+      recognizedName.value = result['emp_name'] ?? 'Unknown';
+      recognizedCode.value = result['emp_code'] ?? 'N/A';
+      apiMessage.value = result['message'] ?? '';
+      recognitionSuccess.value = punchSuccess;
+
+      // Block API calls while showing result
+      blockAPICalls(reason: 'Showing recognition result');
+
+      if (faceRecognized) {
+        print('✅ Face recognized: ${recognizedName.value}');
+
+        // Handle early checkout
+        if (message.contains('early checkout')) {
+          isProcessing.value = false;
+          enteredEmpCode.value = '';
+
+          blockAPICalls(reason: 'Early checkout dialog');
+          final confirmed = await _showEarlyCheckoutDialog();
+          blockAPICalls(reason: 'Early checkout dialog closed');
+
+          if (confirmed == true) {
+            print('✅ Early checkout confirmed');
+            isProcessing.value = true;
+            _clearRecognitionState();
+            await _confirmEarlyCheckout(file);
+          } else {
+            print('❌ Early checkout cancelled');
+            _clearRecognitionState();
+          }
+          return;
+        }
+      } else {
+        print('❌ Face not recognized');
+        final showPopup = result['show_popup'] == true;
+
+        if (showPopup) {
+          recognitionSuccess.value = false;
+          apiMessage.value = result['message'] ?? 'Face not recognized';
+
+          // Show result briefly before dialog
+          await Future.delayed(const Duration(seconds: 1));
+          isProcessing.value = false;
+
+          blockAPICalls(reason: 'Employee code dialog');
+          final empCode = await _showEmployeeCodeDialog();
+          blockAPICalls(reason: 'Employee code dialog closed');
+
+          if (empCode != null && empCode.isNotEmpty) {
+            await _handleManualRecognition(file, empCode);
+          } else {
+            print('❌ User cancelled code entry');
+            _clearRecognitionState();
+          }
+        } else {
+          recognitionSuccess.value = false;
+          apiMessage.value = result['message'] ?? 'Recognition failed';
+        }
+      }
+    } catch (e, stackTrace) {
+      print('❌ Recognition error: $e\n$stackTrace');
+      recognitionSuccess.value = false;
+      apiMessage.value = 'Error: $e';
+      blockAPICalls(reason: 'Error occurred');
+    } finally {
+      isProcessing.value = false;
+      await _deleteFile(file);
+      print('✅ Recognition cycle complete');
+    }
+  }
   Future<void> deleteFace({required String empId}) async {
     if (isProcessing.value) return;
 

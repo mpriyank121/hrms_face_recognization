@@ -54,11 +54,9 @@ class _OtpPageState extends State<OtpPage> {
       ),
       body: Stack(
         children: [
-          /// 🖼 Background Image
-          const CustomBackground(
+           CustomBackground(
             imagePath: 'assets/images/background_image.png',
           ),
-
           SafeArea(
             child: Padding(
               padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.06),
@@ -121,8 +119,6 @@ class _OtpPageState extends State<OtpPage> {
                         ? null
                         : () async {
                       await _authController.verifyUserOtp(context);
-                      // No need to check isPhoneVerified or navigate here,
-                      // because navigation is handled inside verifyUserOtp.
                     },
                   )),
 

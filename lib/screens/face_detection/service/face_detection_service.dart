@@ -18,7 +18,7 @@ class FaceRecognitionService {
     required File imageFile,
   }) async {
     final companyId = await SharedPrefHelper.getCompanyId();
-    final encryptedType = EncryptionHelper.encryptString('register_face');
+    final encryptedType = EncryptionHelper.encryptString('registerFaceHybrid');
     final encryptedEmpId = EncryptionHelper.encryptString(empId);
 
     final dio = DioClient().client;
@@ -28,7 +28,7 @@ class FaceRecognitionService {
       'type': encryptedType,
       'org_id': companyId,
       'emp_id': encryptedEmpId,
-      'image_path': await MultipartFile.fromFile(
+      'image': await MultipartFile.fromFile(
         imageFile.path,
         filename: 'face_${DateTime.now().millisecondsSinceEpoch}.jpg',
       ),
@@ -37,7 +37,7 @@ class FaceRecognitionService {
       print('🗝️ ${field.key}: ${field.value}');
     });
     try {
-      final response = await dio.post(ApiConstants.home, data: formData);
+      final response = await dio.post(ApiConstants.face, data: formData);
       final data = response.data;
 
       if (kDebugMode) {
@@ -107,6 +107,91 @@ class FaceRecognitionService {
       final response = await dio.post(ApiConstants.home, data: formData);
       final data = response.data;
 
+      if (kDebugMode) debugPrint("📥 Recognize Face Response with python: $data");
+
+      // ✅ Handle both Map and List types for `data['data']`
+      final rawData = data['data'];
+      Map<String, dynamic>? dataMap;
+      if (rawData is Map<String, dynamic>) {
+        dataMap = rawData;
+      }
+
+      // ✅ Determine if recognized
+      final isRecognized = data['recognized'] == true ||
+          data['emp_id'] != null ||
+          (dataMap?['emp_id'] != null) ||
+          data['status'] == true;
+
+      return {
+        'success': data['status'] ?? false,
+        'recognized': isRecognized,
+        'emp_code': dataMap?['emp_code'] ?? data['emp_code'] ?? '',
+        'emp_name': dataMap?['emp_name'] ?? data['emp_name'] ?? '',
+        'emp_id': data['emp_id'] ?? dataMap?['emp_id'],
+        'message': data['message'] ?? '',
+        'early_checkout_status': data['early_checkout_status'],
+        'show_popup': data['show_popup'] == true, // ✅ ADD THIS
+
+      };
+    } catch (e, stackTrace) {
+      if (kDebugMode) {
+        debugPrint("❌ Recognize Face Error: $e");
+        debugPrint("📍 StackTrace: $stackTrace");
+      }
+      return {'success': false, 'recognized': false, 'message': e.toString()};
+    }
+  }
+  static Future<Map<String, dynamic>> recognizeFaceWithAws({
+    String? earlyCheckout,
+    String? empCode,
+    required File imageFile,
+  }) async {
+    final encryptedType = EncryptionHelper.encryptString('recognizeFace');
+    final companyId = await SharedPrefHelper.getCompanyId();
+    final latitude = await LocationHelper.getLatitude();
+    final longitude = await LocationHelper.getLongitude();
+    final city = await LocationHelper.getCity();
+    final pincode = await LocationHelper.getPincode();
+    final address = await LocationHelper.getAddress();
+
+    final dio = DioClient().client;
+
+    // Prepare form-data safely
+    final formDataMap = {
+      'type': encryptedType,
+      'org_id': companyId,
+      'image': await MultipartFile.fromFile(
+        imageFile.path,
+        filename: 'face_${DateTime.now().millisecondsSinceEpoch}.jpg',
+      ),
+      'latitude': latitude,
+      'longitude': longitude,
+      'address': address,
+      'pincode': pincode,
+      'city': city,
+    };
+
+    if (earlyCheckout != null) {
+      formDataMap['early_check_out'] = earlyCheckout;
+    }
+
+    if (empCode != null && empCode.isNotEmpty) {
+      formDataMap['emp_code'] = EncryptionHelper.encryptString(empCode);
+    }
+
+    final formData = FormData.fromMap(formDataMap);
+    print('---📤 Sending FormData to Backend ---');
+    formDataMap.forEach((key, value) {
+      if (value is MultipartFile) {
+        print('$key: [File] ${value.filename}');
+      } else {
+        print('$key: $value');
+      }
+    });
+    try {
+      final response = await dio.post(ApiConstants.face, data: formData);
+      final data = response.data;
+
       if (kDebugMode) debugPrint("📥 Recognize Face Response: $data");
 
       // ✅ Handle both Map and List types for `data['data']`
@@ -141,7 +226,6 @@ class FaceRecognitionService {
       return {'success': false, 'recognized': false, 'message': e.toString()};
     }
   }
-
   /// Get employee details
   static Future<Map<String, dynamic>> fetchEmployees({
     DateTime? startDate,
@@ -185,7 +269,7 @@ class FaceRecognitionService {
     required String empId,
   }) async {
     try {
-      final encryptedType = EncryptionHelper.encryptString('delete_face_embiddings');
+      final encryptedType = EncryptionHelper.encryptString('deleteFace');
       final encryptedEmpId = EncryptionHelper.encryptString(empId);
       final companyId = await SharedPrefHelper.getCompanyId();
 
@@ -193,14 +277,14 @@ class FaceRecognitionService {
       final formData = FormData.fromMap({
         'type': encryptedType,
         'emp_id': encryptedEmpId,
-        //'org_id': companyId,
+        'org_id': companyId,
       });
 
       debugPrint("📤 Sending deleteFace request...");
       debugPrint("🧩 FormData: ${formData.fields}");
 
       final response = await Dio().post(
-        ApiConstants.home,
+        ApiConstants.face,
         data: formData,
         options: Options(responseType: ResponseType.json),
       );
